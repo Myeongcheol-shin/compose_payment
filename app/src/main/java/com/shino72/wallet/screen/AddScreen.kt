@@ -45,16 +45,16 @@ fun AddScreen(navController: NavController) {
         Column(modifier = Modifier
             .padding(15.dp)
             .fillMaxWidth()) {
-                setTitleView(navController = navController)
+                setTitleView(navController = navController,"결제 정보 추가하기")
                 setPaymentView(navController = navController)
         }
     }
 }
 
 @Composable
-fun setTitleView(navController: NavController){
+fun setTitleView(navController: NavController, title: String){
     Row(verticalAlignment = Alignment.CenterVertically) {
-        setSubTitleTextView(msg = "결제 정보 추가하기")
+        setSubTitleTextView(msg = title)
         Spacer(modifier = Modifier.weight(1f))
         IconButton(onClick = {
 

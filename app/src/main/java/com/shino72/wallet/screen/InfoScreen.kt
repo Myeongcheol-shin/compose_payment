@@ -91,6 +91,7 @@ fun InfoScreen(navController: NavController, viewModel: InfoViewModel){
                                 .makeText(context, "등록 완료", Toast.LENGTH_SHORT)
                                 .show()
                             navController.popBackStack()
+                            navController.popBackStack()
                         } else {
                             Toast
                                 .makeText(context, "등록 실패 : 정확한 데이터를 입력해주세요", Toast.LENGTH_SHORT)

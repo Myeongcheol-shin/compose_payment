@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.shino72.wallet.db.entity.OttDB
 
 @Dao
@@ -25,4 +26,8 @@ interface OttDao {
     // 삭제 하기
     @Delete
     suspend fun delete(plan: OttDB)
+
+    // 수정하기
+    @Update
+    suspend fun update(plan :OttDB)
 }

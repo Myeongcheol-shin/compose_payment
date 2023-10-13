@@ -43,4 +43,14 @@ class DBViewModel@Inject constructor(private val dbRepository: DBRepository) : V
             dbRepository.insertDB(ott)
         }
     }
+    fun deleteDB(ott: OttDB){
+        viewModelScope.launch(Dispatchers.IO) {
+            dbRepository.deleteDB(ott)
+        }
+    }
+    fun updateDB(ott: OttDB){
+        viewModelScope.launch(Dispatchers.IO){
+            dbRepository.updateDB(ott)
+        }
+    }
 }

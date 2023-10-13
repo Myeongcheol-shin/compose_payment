@@ -31,4 +31,12 @@ class DBRepository@Inject constructor(private val ottDao : OttDao) {
 
     }
 
+    suspend fun deleteDB(ott: OttDB) {
+        ottDao.delete(ott)
+    }
+
+    suspend fun updateDB(ott:OttDB){
+        ottDao.update(ott)
+    }
+
 }

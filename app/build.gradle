@@ -50,6 +50,9 @@ android {
 }
 
 dependencies {
+    // tedPermission
+    implementation 'io.github.ParkSangGwon:tedpermission-normal:3.3.0'
+
     // room db
     implementation "androidx.room:room-runtime:2.5.2"
     implementation "androidx.room:room-ktx:2.5.2"

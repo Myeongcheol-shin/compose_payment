@@ -1,11 +1,20 @@
 package com.shino72.wallet.screen
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Context.ALARM_SERVICE
+import android.content.Intent
+import android.os.Build
+import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,25 +27,36 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.gun0912.tedpermission.PermissionListener
+import com.gun0912.tedpermission.normal.TedPermission
+import com.shino72.wallet.MyApplication
+import com.shino72.wallet.MyApplication.Companion.prefs
 import com.shino72.wallet.data.OttData
 import com.shino72.wallet.data.OttState
 import com.shino72.wallet.db.entity.OttDB
+import com.shino72.wallet.receiver.AlarmReceiver
 import com.shino72.wallet.ui.theme.Compose_paymentTheme
 import com.shino72.wallet.ui.theme.DarkGrey
 import com.shino72.wallet.ui.theme.setSpacer10
@@ -44,7 +64,10 @@ import com.shino72.wallet.ui.theme.setSpacer20
 import com.shino72.wallet.ui.theme.setSpacer5
 import com.shino72.wallet.viewmodels.DBViewModel
 import java.time.LocalDate
+import java.util.Calendar
+import javax.annotation.meta.When
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun MainScreen(navController: NavController) {
 
@@ -65,14 +88,44 @@ fun MainScreen(navController: NavController) {
     }
 }
 // 내 정기결제 목록
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun setMyPaymentList(navController: NavController, dbState: OttState) {
     val scrollState = rememberScrollState()
     val item = dbState.db
+    val context = LocalContext.current
+    val iconColor = when(prefs.EditStatus) {
+        true -> {Color.Red}
+        false -> {Color.White}
+    }
+    val alarmState = remember {
+        mutableStateOf(iconColor)
+    }
     Row(verticalAlignment = Alignment.CenterVertically) {
         setSubTitleTextView(msg = "내 정기결제 목록")
         Spacer(modifier = Modifier.weight(1f))
+        IconButton(onClick = {
+            val prefs = MyApplication.prefs
+            when(prefs.EditStatus) {
+                true -> {
+                    alarmState.value = Color.White
+                    setAlarm(type = false, context = context)
+                }
+                false -> {
+                    setAlarm(type = true, context = context)
+                    alarmState.value = Color.Red
+                }
+            }
+            prefs.EditStatus = !prefs.EditStatus
+        }) {
+            androidx.compose.material.Icon(imageVector = Icons.Filled.Notifications, contentDescription = "Notifications", tint = alarmState.value, modifier = Modifier.width(40.dp))
+        }
+        IconButton(onClick = {
+            navController.navigate("ListScreen")
+        }){
+            androidx.compose.material.Icon(imageVector = Icons.Filled.List, contentDescription = "List", tint = Color.White, modifier = Modifier.width(40.dp))
+        }
         IconButton(onClick = {
             navController.navigate("AddScreen")
         }){
@@ -83,8 +136,10 @@ fun setMyPaymentList(navController: NavController, dbState: OttState) {
     Row(modifier = Modifier
         .background(color = DarkGrey, RoundedCornerShape(8.dp))
         .fillMaxWidth()
+        .height(80.dp)
         .padding(end = 10.dp, top = 10.dp, bottom = 10.dp)
         .horizontalScroll(scrollState)) {
+
         item?.forEach {
             val dt = OttData.getOttWithName(it.platform)
             if(dt != null){
@@ -92,7 +147,7 @@ fun setMyPaymentList(navController: NavController, dbState: OttState) {
                 Box(modifier = Modifier
                     .padding(start = 10.dp)
                     .height(80.dp)
-                    .width(80.dp)
+                    .aspectRatio(1f)
                     .clip(shape = RoundedCornerShape(10.dp))) {
                     GlideImage(
                         model = uri,
@@ -109,7 +164,6 @@ fun setMyPaymentList(navController: NavController, dbState: OttState) {
 @Composable
 fun setThisPaymentPriceView(dbState: OttState) {
     val today = LocalDate.now().dayOfMonth
-    val price = dbState.db?.filter { it.duedate >= today }?.sumOf { it.price }
     setSubTitleTextView(msg = "이번 달 결제 금액")
     setSpacer10()
     Row(modifier = Modifier
@@ -169,7 +223,6 @@ fun setThisMonthPaymentView(dbState: OttState){
 @Composable
 fun thisMonthPaymentItem(ottDB : OttDB){
     val uri = getImageUriForName(name = ottDB.platform)
-    val today = LocalDate.now().dayOfMonth
     Row(modifier = Modifier
         .fillMaxWidth()
         .padding(top = 10.dp)) {
@@ -184,7 +237,9 @@ fun thisMonthPaymentItem(ottDB : OttDB){
             )
         }
         Spacer(modifier = Modifier.width(5.dp))
-        Column(modifier = Modifier.padding(start = 10.dp).align(Alignment.CenterVertically)) {
+        Column(modifier = Modifier
+            .padding(start = 10.dp)
+            .align(Alignment.CenterVertically)) {
             Text(text = ottDB.korean, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Text(text = "${ottDB.price}원", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
@@ -214,3 +269,33 @@ fun setSubTitleTextView(msg: String) {
     )
 }
 
+// false : 알람 해제 / ture : 알람 설정
+fun setAlarm(type : Boolean, context : Context)
+{
+    val alarmManager = context.getSystemService(ALARM_SERVICE) as AlarmManager
+    val intent = Intent(context, AlarmReceiver::class.java)
+    var pendingIntent = PendingIntent.getBroadcast(
+        context, 0, intent, PendingIntent.FLAG_IMMUTABLE
+    )
+    when(type)
+    {
+        false -> {
+            alarmManager.cancel(pendingIntent)
+            Toast.makeText(context,"알람 OFF", Toast.LENGTH_SHORT).show()
+        }
+        true -> {
+            val calendar = Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis()
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 6)
+            }
+            alarmManager.setInexactRepeating(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                AlarmManager.INTERVAL_DAY,
+                pendingIntent
+            )
+            Toast.makeText(context,"알람 ON", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
